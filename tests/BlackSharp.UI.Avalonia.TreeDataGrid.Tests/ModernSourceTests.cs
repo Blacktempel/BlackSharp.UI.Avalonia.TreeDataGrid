@@ -144,6 +144,37 @@ namespace BlackSharp.UI.Avalonia.TreeDataGrid.Tests
             grid.ItemsSource = null;
         }
 
+        /// <summary>
+        /// Verifies that newly inserted roots apply their saved expansion bindings without realizing a cell.
+        /// </summary>
+        [AvaloniaFact]
+        public void Control_ItemsSource_Restores_Expanded_Root_Added_After_Binding()
+        {
+            // Arrange
+            var items = new ObservableCollection<Model>();
+            var grid  = new TreeDataGrid();
+            grid.Columns.Add(new TreeDataGridHierarchicalExpanderColumn
+            {
+                ChildrenBinding   = new Binding(nameof(Model.Children)),
+                IsExpandedBinding = new Binding(nameof(Model.IsExpanded)) { Mode = BindingMode.TwoWay },
+                Inner             = new TreeDataGridTextColumn { Binding = new Binding(nameof(Model.Text)) },
+            });
+            grid.ItemsSource = items;
+
+            var child = new Model { Text = "Child", IsExpanded = true };
+            child.Children.Add(new Model { Text = "Grandchild" });
+            var root = new Model { Text = "Root", IsExpanded = true };
+            root.Children.Add(child);
+
+            // Act
+            items.Add(root);
+
+            // Assert
+            Assert.Equal(3, grid.Rows!.Count);
+            Assert.True(root.IsExpanded);
+            Assert.True(child.IsExpanded);
+        }
+
         [AvaloniaFact]
         public void Replacing_And_Clearing_An_Expander_Rebuilds_Rows_And_Selection()
         {
@@ -264,6 +295,7 @@ namespace BlackSharp.UI.Avalonia.TreeDataGrid.Tests
         {
             #region Fields
 
+            private bool   _isExpanded;
             private string _text = string.Empty;
 
             #endregion
@@ -273,6 +305,19 @@ namespace BlackSharp.UI.Avalonia.TreeDataGrid.Tests
             public int Number { get; set; }
 
             public ObservableCollection<Model> Children { get; } = [];
+
+            public bool IsExpanded
+            {
+                get => _isExpanded;
+                set
+                {
+                    if (_isExpanded != value)
+                    {
+                        _isExpanded = value;
+                        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(IsExpanded)));
+                    }
+                }
+            }
 
             public string Text
             {

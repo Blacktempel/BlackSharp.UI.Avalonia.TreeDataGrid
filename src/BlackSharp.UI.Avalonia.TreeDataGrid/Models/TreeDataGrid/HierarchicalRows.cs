@@ -370,14 +370,25 @@ namespace BlackSharp.UI.Avalonia.TreeDataGrid.Models
                     index += AddRowsAndDescendants(index, row);
                 }
 
-                if (raise && index > start)
+                if (index > start)
                 {
-                    CollectionChanged?.Invoke(
-                        this,
-                        new NotifyCollectionChangedEventArgs(
-                            NotifyCollectionChangedAction.Add,
-                            new ListSpan(_flattenedRows, start, index - start),
-                            start));
+                    var addedRows = _flattenedRows.GetRange(start, index - start);
+
+                    if (raise)
+                    {
+                        CollectionChanged?.Invoke(
+                            this,
+                            new NotifyCollectionChangedEventArgs(
+                                NotifyCollectionChangedAction.Add,
+                                new ListSpan(_flattenedRows, start, index - start),
+                                start));
+                    }
+
+                    // New rows need their model bindings even when the source was initially empty.
+                    foreach (var row in addedRows)
+                    {
+                        row.InitializeBindings();
+                    }
                 }
             }
 
