@@ -4,8 +4,16 @@ using System.Globalization;
 
 namespace BlackSharp.UI.Avalonia.TreeDataGrid.Converters
 {
-    public class IndentConverter : IValueConverter
+    public class IndentConverter : IValueConverter, IMultiValueConverter
     {
+        #region Fields
+
+        private const double ChevronHorizontalMargin = 8;
+
+        private const double DefaultIndentStep = 20;
+
+        #endregion
+
         #region Properties
 
         /// <summary>
@@ -22,10 +30,24 @@ namespace BlackSharp.UI.Avalonia.TreeDataGrid.Converters
         {
             if (value is int indent)
             {
-                return new Thickness(20 * indent, 0, 0, 0);
+                return new Thickness(DefaultIndentStep * indent, 0, 0, 0);
             }
 
             return new Thickness();
+        }
+
+        /// <summary>
+        /// Converts an indentation level and chevron width into a left padding that keeps tree levels aligned.
+        /// </summary>
+        public object Convert(IList<object?> values, Type targetType, object? parameter, CultureInfo culture)
+        {
+            if (values.Count == 2 && values[0] is int indent && values[1] is double chevronWidth &&
+                double.IsFinite(chevronWidth) && chevronWidth >= 0)
+            {
+                return new Thickness((chevronWidth + ChevronHorizontalMargin) * indent, 0, 0, 0);
+            }
+
+            return Convert(values.Count > 0 ? values[0] : null, targetType, parameter, culture);
         }
 
         /// <summary>

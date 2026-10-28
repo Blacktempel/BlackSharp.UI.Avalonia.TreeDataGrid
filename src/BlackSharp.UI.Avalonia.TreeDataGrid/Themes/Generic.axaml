@@ -297,15 +297,24 @@
                                 Background="{TemplateBinding Background}"
                                 BorderBrush="{TemplateBinding BorderBrush}"
                                 BorderThickness="{TemplateBinding BorderThickness}"
-                                CornerRadius="{TemplateBinding CornerRadius}"
-                                Padding="{TemplateBinding Indent, Converter={x:Static conv:IndentConverter.Instance}}">
+                                CornerRadius="{TemplateBinding CornerRadius}">
+                            <Border.Padding>
+                                <MultiBinding Converter="{x:Static conv:IndentConverter.Instance}">
+                                    <Binding Path="Indent" RelativeSource="{RelativeSource TemplatedParent}"/>
+                                    <Binding Path="$parent[TreeDataGrid].ExpanderChevronWidth"/>
+                                </MultiBinding>
+                            </Border.Padding>
+
                             <DockPanel>
-                                <Border DockPanel.Dock="Left"
+                                <Border x:Name="ChevronHost"
+                                        DockPanel.Dock="Left"
                                         Margin="4 0"
-                                        Width="12"
-                                        Height="12">
+                                        Width="{Binding $parent[TreeDataGrid].ExpanderChevronWidth}"
+                                        Height="{Binding $parent[TreeDataGrid].ExpanderChevronHeight}">
                                     <ToggleButton Theme="{StaticResource TreeDataGridExpandCollapseChevron}"
                                                   Focusable="False"
+                                                  Width="{Binding $parent[TreeDataGrid].ExpanderChevronWidth}"
+                                                  Height="{Binding $parent[TreeDataGrid].ExpanderChevronHeight}"
                                                   IsChecked="{TemplateBinding IsExpanded, Mode=TwoWay}"
                                                   IsVisible="{TemplateBinding ShowExpander}"/>
                                 </Border>

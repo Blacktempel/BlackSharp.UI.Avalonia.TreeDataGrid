@@ -103,6 +103,62 @@ namespace BlackSharp.UI.Avalonia.TreeDataGrid.Tests
             }
         }
 
+        [AvaloniaFact]
+        public void Chevron_Dimensions_And_Indent_Track_Grid_Properties()
+        {
+            // Arrange
+            var root = new Model { Children = { new Model() } };
+            using var source = CreateInteractionSource(root);
+            source.Expand(0);
+            var grid = new TreeDataGrid { Source = source };
+
+            // Act
+            var window = Show(grid);
+
+            try
+            {
+                var cell = Assert.IsType<TreeDataGridExpanderCell>(grid.TryGetCell(0, 1));
+                var cellBorder = cell.GetVisualChildren().OfType<Border>().Single(x => x.Name == "CellBorder");
+                var chevronHost = cell.GetVisualDescendants().OfType<Border>().Single(x => x.Name == "ChevronHost");
+                var chevron = cell.GetVisualDescendants().OfType<ToggleButton>().Single();
+
+                // Assert
+                Assert.Equal(12, chevronHost.Width);
+                Assert.Equal(12, chevronHost.Height);
+                Assert.Equal(12, chevron.Width);
+                Assert.Equal(12, chevron.Height);
+                Assert.Equal(new Thickness(20, 0, 0, 0), cellBorder.Padding);
+
+                // Act
+                grid.ExpanderChevronWidth = 18;
+                grid.ExpanderChevronHeight = 24;
+                Layout(window);
+
+                // Assert
+                Assert.Equal(18, chevronHost.Width);
+                Assert.Equal(24, chevronHost.Height);
+                Assert.Equal(18, chevron.Width);
+                Assert.Equal(24, chevron.Height);
+                Assert.Equal(new Thickness(26, 0, 0, 0), cellBorder.Padding);
+
+                // Act
+                grid.ExpanderChevronWidth = 8;
+                grid.ExpanderChevronHeight = 8;
+                Layout(window);
+
+                // Assert
+                Assert.Equal(8, chevronHost.Width);
+                Assert.Equal(8, chevronHost.Height);
+                Assert.Equal(8, chevron.Width);
+                Assert.Equal(8, chevron.Height);
+                Assert.Equal(new Thickness(16, 0, 0, 0), cellBorder.Padding);
+            }
+            finally
+            {
+                window.Close();
+            }
+        }
+
         [AvaloniaTheory]
         [InlineData(false, 0)]
         [InlineData(true, 0)]

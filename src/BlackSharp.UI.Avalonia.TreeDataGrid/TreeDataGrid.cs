@@ -58,6 +58,20 @@ namespace BlackSharp.UI.Avalonia.TreeDataGrid
                 o => o.ElementFactory,
                 (o, v) => o.ElementFactory = v);
 
+        /// <summary>
+        /// Defines the height of the expand/collapse chevron.
+        /// </summary>
+        public static readonly StyledProperty<double>                                   ExpanderChevronHeightProperty =
+            AvaloniaProperty.Register<TreeDataGrid, double>(nameof(ExpanderChevronHeight), 12,
+                validate: value => double.IsFinite(value) && value >= 0);
+
+        /// <summary>
+        /// Defines the width of the expand/collapse chevron.
+        /// </summary>
+        public static readonly StyledProperty<double>                                   ExpanderChevronWidthProperty  =
+            AvaloniaProperty.Register<TreeDataGrid, double>(nameof(ExpanderChevronWidth), 12,
+                validate: value => double.IsFinite(value) && value >= 0);
+
         internal static readonly DirectProperty<TreeDataGrid, IRows?>                   CoreRowsProperty             =
             AvaloniaProperty.RegisterDirect<TreeDataGrid, IRows?>(
                 nameof(CoreRows),
@@ -173,6 +187,24 @@ namespace BlackSharp.UI.Avalonia.TreeDataGrid
                 _ = value ?? throw new ArgumentNullException(nameof(value));
                 SetAndRaise(ElementFactoryProperty, ref _elementFactory!, value);
             }
+        }
+
+        /// <summary>
+        /// Gets or sets the height of the expand/collapse chevron.
+        /// </summary>
+        public double ExpanderChevronHeight
+        {
+            get => GetValue(ExpanderChevronHeightProperty);
+            set => SetValue(ExpanderChevronHeightProperty, value);
+        }
+
+        /// <summary>
+        /// Gets or sets the width of the expand/collapse chevron and its tree indentation step.
+        /// </summary>
+        public double ExpanderChevronWidth
+        {
+            get => GetValue(ExpanderChevronWidthProperty);
+            set => SetValue(ExpanderChevronWidthProperty, value);
         }
 
         /// <summary>

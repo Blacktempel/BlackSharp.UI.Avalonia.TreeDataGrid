@@ -21,6 +21,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Docs", "Docs", "{754FC069-D
 		LICENSE-MIT = LICENSE-MIT
 		README.md = README.md
 		docs\selection.md = docs\selection.md
+		Versions\TREEDATAGRID.VERSION = Versions\TREEDATAGRID.VERSION
 	EndProjectSection
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BlackSharp.UI.Avalonia.TreeDataGrid.Benchmark", "tests\BlackSharp.UI.Avalonia.TreeDataGrid.Benchmark\BlackSharp.UI.Avalonia.TreeDataGrid.Benchmark.csproj", "{72C8B10B-A8A6-9B7E-C798-B5C392FDB7F1}"
