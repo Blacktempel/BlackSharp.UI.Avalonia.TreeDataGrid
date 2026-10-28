@@ -1,0 +1,92 @@
+﻿using Avalonia;
+using Avalonia.Controls;
+using System.Collections.Specialized;
+
+namespace BlackSharp.UI.Avalonia.TreeDataGrid.Models
+{
+    /// <summary>
+    /// Represents a collection of columns in an <see cref="ITreeDataGridSource"/>.
+    /// </summary>
+    /// <remarks>
+    /// Note that items retrieved from an <see cref="IColumns"/> collection may be reused, so the
+    /// <see cref="IColumn"/> should be treated as valid only until the next item is retrieved from
+    /// the collection.
+    /// </remarks>
+    internal interface IColumns : IReadOnlyList<IColumn>, INotifyCollectionChanged
+    {
+        #region Public
+
+        /// <summary>
+        /// Called by the <see cref="TreeDataGrid"/> when a cell has been measured.
+        /// </summary>
+        /// <param name="columnIndex">The cell column index or -1 for a row header.</param>
+        /// <param name="rowIndex">The cell row index or -1 for a column header.</param>
+        /// <param name="size">The measured size.</param>
+        /// <returns>
+        /// The desired size of the cell after column sizing has been applied.
+        /// </returns>
+        Size CellMeasured(int columnIndex, int rowIndex, Size size);
+
+        /// <summary>
+        /// Gets the index and X position of the column at the specified X position, if it can be
+        /// calculated.
+        /// </summary>
+        /// <param name="x">The X position</param>
+        /// <returns>
+        /// A tuple containing the column index and X position of the column, or (-1,-1) if the
+        /// column could not be calculated.
+        /// </returns>
+        (int index, double x) GetColumnAt(double x);
+
+        /// <summary>
+        /// Gets the estimated total width of all columns.
+        /// </summary>
+        /// <param name="constraint">
+        /// The available viewport width.
+        /// </param>
+        double GetEstimatedWidth(double constraint);
+
+        /// <summary>
+        /// Commits the actual widths of the columns.
+        /// </summary>
+        void CommitActualWidths();
+
+        /// <summary>
+        /// Sets the width of a column.
+        /// </summary>
+        /// <param name="columnIndex">The column index.</param>
+        /// <param name="width">The column width</param>
+        void SetColumnWidth(int columnIndex, GridLength width);
+
+        /// <summary>
+        /// Resizes a column, compensating with its following visible column when one exists.
+        /// </summary>
+        /// <param name="columnIndex">The column whose right edge is dragged.</param>
+        /// <param name="adjacentColumnIndex">The following visible column, or -1 when there is none.</param>
+        /// <param name="delta">The horizontal drag distance in pixels.</param>
+        void ResizeColumn(int columnIndex, int adjacentColumnIndex, double delta);
+
+        /// <summary>
+        /// Called by the <see cref="TreeDataGrid"/> when the viewport changes, in order to update
+        /// star columns.
+        /// </summary>
+        /// <param name="viewport">The current viewport.</param>
+        void ViewportChanged(Rect viewport);
+
+        /// <summary>
+        /// Signal that the columns layout has changed.
+        /// </summary>
+        void InvalidateLayout();
+
+        #endregion
+
+        #region Events
+
+        /// <summary>
+        /// Raised when column layout (sizing, visibility, order, etc.) needs to be refreshed.
+        /// </summary>
+        event EventHandler LayoutInvalidated;
+
+        #endregion
+    }
+}

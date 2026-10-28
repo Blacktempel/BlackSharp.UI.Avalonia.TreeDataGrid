@@ -1,0 +1,151 @@
+﻿using System.Collections;
+
+namespace BlackSharp.UI.Avalonia.TreeDataGrid.Selection
+{
+    internal abstract class TreeSelectionModelSelectionChangedEventArgs : EventArgs
+    {
+        #region Properties
+
+        /// <summary>
+        /// Gets the indexes of the items that were removed from the selection.
+        /// </summary>
+        public abstract IReadOnlyList<IndexPath> DeselectedIndexes { get; }
+
+        /// <summary>
+        /// Gets the indexes of the items that were added to the selection.
+        /// </summary>
+        public abstract IReadOnlyList<IndexPath> SelectedIndexes { get; }
+
+        /// <summary>
+        /// Gets the items that were removed from the selection.
+        /// </summary>
+        public IReadOnlyList<object?> DeselectedItems => GetUntypedDeselectedItems();
+
+        /// <summary>
+        /// Gets the items that were added to the selection.
+        /// </summary>
+        public IReadOnlyList<object?> SelectedItems => GetUntypedSelectedItems();
+
+        #endregion
+
+        #region Protected
+
+        protected abstract IReadOnlyList<object?> GetUntypedDeselectedItems();
+
+        protected abstract IReadOnlyList<object?> GetUntypedSelectedItems();
+
+        #endregion
+    }
+
+    internal class TreeSelectionModelSelectionChangedEventArgs<T> : TreeSelectionModelSelectionChangedEventArgs
+    {
+        #region Constructor
+
+        public TreeSelectionModelSelectionChangedEventArgs(
+            IReadOnlyList<IndexPath>? deselectedIndexes = null,
+            IReadOnlyList<IndexPath>? selectedIndexes   = null,
+            IReadOnlyList<T?>? deselectedItems          = null,
+            IReadOnlyList<T?>? selectedItems            = null)
+        {
+            DeselectedIndexes = deselectedIndexes ?? [];
+            SelectedIndexes   = selectedIndexes ?? [];
+            DeselectedItems   = deselectedItems ?? [];
+            SelectedItems     = selectedItems ?? [];
+        }
+
+        #endregion
+
+        #region Fields
+
+        private IReadOnlyList<object?>? _deselectedItems;
+
+        private IReadOnlyList<object?>? _selectedItems;
+
+        #endregion
+
+        #region Properties
+
+        /// <summary>
+        /// Gets the indexes of the items that were removed from the selection.
+        /// </summary>
+        public override IReadOnlyList<IndexPath> DeselectedIndexes { get; }
+
+        /// <summary>
+        /// Gets the indexes of the items that were added to the selection.
+        /// </summary>
+        public override IReadOnlyList<IndexPath> SelectedIndexes { get; }
+
+        /// <summary>
+        /// Gets the items that were removed from the selection.
+        /// </summary>
+        public new IReadOnlyList<T?> DeselectedItems { get; }
+
+        /// <summary>
+        /// Gets the items that were added to the selection.
+        /// </summary>
+        public new IReadOnlyList<T?> SelectedItems { get; }
+
+        #endregion
+
+        #region Protected
+
+        protected override IReadOnlyList<object?> GetUntypedDeselectedItems()
+        {
+            return _deselectedItems ??= (DeselectedItems as IReadOnlyList<object?>) ??
+                new Untyped(DeselectedItems);
+        }
+
+        protected override IReadOnlyList<object?> GetUntypedSelectedItems()
+        {
+            return _selectedItems ??= (SelectedItems as IReadOnlyList<object?>) ??
+                new Untyped(SelectedItems);
+        }
+
+        #endregion
+
+        #region Nested Types
+
+        private class Untyped : IReadOnlyList<object?>
+        {
+            #region Constructor
+
+            public Untyped(IReadOnlyList<T?> source) => _source = source;
+
+            #endregion
+
+            #region Fields
+
+            private readonly IReadOnlyList<T?> _source;
+
+            #endregion
+
+            #region Properties
+
+            public object? this[int index] => _source[index];
+
+            public int Count => _source.Count;
+
+            #endregion
+
+            #region Public
+
+            public IEnumerator<object?> GetEnumerator()
+            {
+                foreach (var i in _source)
+                {
+                    yield return i;
+                }
+            }
+
+            #endregion
+
+            #region IEnumerable
+
+            IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
+
+            #endregion
+        }
+
+        #endregion
+    }
+}

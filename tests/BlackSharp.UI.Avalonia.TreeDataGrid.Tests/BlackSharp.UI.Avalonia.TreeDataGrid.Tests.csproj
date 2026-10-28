@@ -1,0 +1,31 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <AssemblyName>BlackSharp.UI.Avalonia.TreeDataGrid.Tests</AssemblyName>
+    <RootNamespace>BlackSharp.UI.Avalonia.TreeDataGrid.Tests</RootNamespace>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <NoWarn>$(NoWarn);CS1591</NoWarn>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <IsPackable>False</IsPackable>
+    <UseMicrosoftTestingPlatformRunner>true</UseMicrosoftTestingPlatformRunner>
+    <TargetFrameworks>net8.0;net10.0</TargetFrameworks>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Avalonia.Themes.Fluent" Version="12.1.4" />
+    <PackageReference Include="Avalonia.Headless.XUnit" Version="12.1.4" />
+    <PackageReference Include="System.Reactive" Version="7.0.0" />
+    <PackageReference Include="xunit.v3" Version="3.2.2" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="4.0.1">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.11.0" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\BlackSharp.UI.Avalonia.TreeDataGrid\BlackSharp.UI.Avalonia.TreeDataGrid.csproj" />
+    <ProjectReference Include="..\..\samples\BlackSharp.UI.Avalonia.TreeDataGrid.Demo\BlackSharp.UI.Avalonia.TreeDataGrid.Demo.csproj" />
+  </ItemGroup>
+</Project>

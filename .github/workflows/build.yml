@@ -1,0 +1,134 @@
+﻿name: Build master
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+  workflow_dispatch:
+    inputs:
+      upload_build_artifacts:
+        description: Upload the NuGet package and compiled libraries
+        required: false
+        default: true
+        type: boolean
+  workflow_call:
+    inputs:
+      upload_build_artifacts:
+        required: false
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+
+env:
+  DOTNET_NOLOGO: 'true'
+  DOTNET_CLI_TELEMETRY_OPTOUT: 'true'
+
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [windows-latest, ubuntu-latest]
+    env:
+      Solution_Name: BlackSharp.UI.Avalonia.TreeDataGrid.sln
+      Package_Project: src/BlackSharp.UI.Avalonia.TreeDataGrid/BlackSharp.UI.Avalonia.TreeDataGrid.csproj
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+
+      - name: Install supported .NET SDKs
+        uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
+        with:
+          dotnet-version: |
+            8.0.x
+            10.0.x
+
+      - name: Cache NuGet packages
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.nuget/packages
+          key: ${{ runner.os }}-${{ runner.arch }}-nuget-${{ hashFiles('**/*.csproj', '**/*.props', '**/*.targets', '**/packages.lock.json', '**/nuget.config', '**/NuGet.config', '**/global.json') }}
+          restore-keys: |
+            ${{ runner.os }}-${{ runner.arch }}-nuget-
+
+      - name: Validate package version
+        id: version
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          dotnet msbuild $env:Package_Project -nologo -t:ValidateTreeDataGridVersion
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $version = (Get-Content -LiteralPath Versions/TREEDATAGRID.VERSION -Raw).Trim()
+
+          "version=$version" >> $env:GITHUB_OUTPUT
+
+      - name: Restore
+        run: dotnet restore ${{ env.Solution_Name }}
+
+      - name: Build Release
+        run: dotnet build ${{ env.Solution_Name }} --configuration Release --no-restore
+
+      - name: Run unit tests on both frameworks
+        run: dotnet test --project tests/BlackSharp.UI.Avalonia.TreeDataGrid.Tests/BlackSharp.UI.Avalonia.TreeDataGrid.Tests.csproj --configuration Release --no-build --no-restore
+
+      - name: Run rendering tests on both frameworks
+        run: dotnet test --project tests/BlackSharp.UI.Avalonia.TreeDataGrid.RenderingTests/BlackSharp.UI.Avalonia.TreeDataGrid.RenderingTests.csproj --configuration Release --no-build --no-restore
+
+      - name: Pack NuGet package
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: dotnet pack $env:Package_Project --configuration Release --no-build --no-restore --output "$env:RUNNER_TEMP/TreeDataGrid-NuGet"
+
+      - name: Verify NuGet package
+        if: runner.os == 'Windows'
+        shell: pwsh
+        env:
+          PACKAGE_VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $packages = @(Get-ChildItem -LiteralPath "$env:RUNNER_TEMP/TreeDataGrid-NuGet" -Filter '*.nupkg' -File)
+          if ($packages.Count -ne 1) { throw "Expected one NuGet package, found $($packages.Count)." }
+
+          $archive = [System.IO.Compression.ZipFile]::OpenRead($packages[0].FullName)
+          try {
+            $specifications = @($archive.Entries | Where-Object { $_.FullName.EndsWith('.nuspec') })
+            if ($specifications.Count -ne 1) { throw 'Expected one NuGet specification.' }
+
+            $reader = [System.IO.StreamReader]::new($specifications[0].Open())
+            try { [xml]$specification = $reader.ReadToEnd() }
+            finally { $reader.Dispose() }
+
+            if ([string]$specification.package.metadata.id -cne 'BlackSharp.UI.Avalonia.TreeDataGrid' -or
+                [string]$specification.package.metadata.version -cne $env:PACKAGE_VERSION) {
+              throw "Unexpected package identity or version in $($packages[0].Name)."
+            }
+
+            foreach ($framework in @('net8.0', 'net10.0')) {
+              $library = "lib/$framework/BlackSharp.UI.Avalonia.TreeDataGrid.dll"
+              if ($library -cnotin $archive.Entries.FullName) { throw "Missing $library in the NuGet package." }
+            }
+          }
+          finally { $archive.Dispose() }
+
+      - name: Upload NuGet package
+        if: ${{ runner.os == 'Windows' && github.event_name != 'push' && github.event_name != 'pull_request' && inputs.upload_build_artifacts }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: TreeDataGrid-NuGet-${{ steps.version.outputs.version }}
+          path: ${{ runner.temp }}/TreeDataGrid-NuGet/*.nupkg
+          if-no-files-found: error
+
+      - name: Upload compiled libraries
+        if: ${{ runner.os == 'Windows' && github.event_name != 'push' && github.event_name != 'pull_request' && inputs.upload_build_artifacts }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: TreeDataGrid-Libraries-${{ steps.version.outputs.version }}
+          path: |
+            src/BlackSharp.UI.Avalonia.TreeDataGrid/bin/Release/net8.0/
+            src/BlackSharp.UI.Avalonia.TreeDataGrid/bin/Release/net10.0/
+          if-no-files-found: error

@@ -1,0 +1,42 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <AssemblyName>BlackSharp.UI.Avalonia.TreeDataGrid.Demo</AssemblyName>
+    <RootNamespace>BlackSharp.UI.Avalonia.TreeDataGrid.Demo</RootNamespace>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <NoWarn>$(NoWarn);CS1591</NoWarn>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <IsPackable>False</IsPackable>
+    <TargetFrameworks>net8.0;net10.0</TargetFrameworks>
+    <OutputType>WinExe</OutputType>
+    <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
+    <IsAotCompatible>true</IsAotCompatible>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)' == 'Release'">
+    <PublishAot>true</PublishAot>
+  </PropertyGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="BlackSharp.UI.Avalonia.TreeDataGrid.Tests" />
+  </ItemGroup>
+  <ItemGroup>
+    <AvaloniaResource Include="Assets\**" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Remove="Assets\file.png" />
+    <None Remove="Assets\folder.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Avalonia" Version="12.1.4" />
+    <PackageReference Include="Avalonia.Desktop" Version="12.1.4" />
+    <PackageReference Include="Avalonia.Themes.Fluent" Version="12.1.4" />
+    <PackageReference Include="Avalonia.Fonts.Inter" Version="12.1.4" />
+    <PackageReference Include="AvaloniaUI.DiagnosticsSupport" Version="2.2.3" />
+    <PackageReference Include="Bogus" Version="35.6.5" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\BlackSharp.UI.Avalonia.TreeDataGrid\BlackSharp.UI.Avalonia.TreeDataGrid.csproj" />
+  </ItemGroup>
+</Project>

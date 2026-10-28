@@ -1,0 +1,63 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <AssemblyName>BlackSharp.UI.Avalonia.TreeDataGrid</AssemblyName>
+    <RootNamespace>BlackSharp.UI.Avalonia.TreeDataGrid</RootNamespace>
+    <LangVersion>latest</LangVersion>
+    <TreeDataGridVersionFile>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)../../Versions/TREEDATAGRID.VERSION'))</TreeDataGridVersionFile>
+    <TreeDataGridVersion Condition="Exists('$(TreeDataGridVersionFile)')">$([System.IO.File]::ReadAllText('$(TreeDataGridVersionFile)').Trim())</TreeDataGridVersion>
+    <Version>$(TreeDataGridVersion)</Version>
+    <Nullable>enable</Nullable>
+    <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+    <NoWarn>$(NoWarn);CS1591</NoWarn>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <TargetFrameworks>net8.0;net10.0</TargetFrameworks>
+    <IsPackable>True</IsPackable>
+    <PackageProjectUrl>https://github.com/Blacktempel/BlackSharp.UI.Avalonia.TreeDataGrid</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/Blacktempel/BlackSharp.UI.Avalonia.TreeDataGrid</RepositoryUrl>
+    <PackageLicenseExpression>MPL-2.0</PackageLicenseExpression>
+    <PackageIcon>BlackSharp.png</PackageIcon>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
+    <IsAotCompatible>true</IsAotCompatible>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <PackageId>BlackSharp.UI.Avalonia.TreeDataGrid</PackageId>
+    <Product>BlackSharp.UI.Avalonia.TreeDataGrid</Product>
+    <Copyright>© AvaloniaUI Contributors, modified by Blacktempel</Copyright>
+    <Authors>Blacktempel, Fidarit Mullayanov, Steven Kirk, contributors</Authors>
+    <Company>TreeDataGrid community contributors</Company>
+    <Description>TreeDataGrid displays hierarchical and tabular data in a single Avalonia control.</Description>
+    <RepositoryType>git</RepositoryType>
+    <PackageTags>avalonia, ui-components, datagrid, treeview, xaml, csharp, dotnet</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="..\..\Assets\BlackSharp.png" Pack="true" PackagePath="\" />
+    <None Include="..\..\README.md" Pack="true" PackagePath="\" />
+    <None Include="..\..\LICENSE" Pack="true" PackagePath="" />
+    <None Include="..\..\LICENSE-MIT" Pack="true" PackagePath="" />
+    <None Include="..\..\docs\*.md" Pack="true" PackagePath="docs/" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Avalonia" Version="12.1.4" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="BlackSharp.UI.Avalonia.TreeDataGrid.Benchmark" />
+    <InternalsVisibleTo Include="BlackSharp.UI.Avalonia.TreeDataGrid.Tests" />
+  </ItemGroup>
+
+  <Target Name="ValidateTreeDataGridVersion"
+          BeforeTargets="PrepareForBuild;Pack"
+          Condition="'$(IsPackable)' == 'true'">
+    <Error Condition="!Exists('$(TreeDataGridVersionFile)')"
+           Text="The TreeDataGrid version file '$(TreeDataGridVersionFile)' does not exist." />
+    <Error Condition="!$([System.Text.RegularExpressions.Regex]::IsMatch('$(TreeDataGridVersion)', '^\d+\.\d+\.\d+(?:-[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?(?:\+[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?$'))"
+           Text="The TreeDataGrid version '$(TreeDataGridVersion)' in '$(TreeDataGridVersionFile)' is not a valid semantic version." />
+  </Target>
+</Project>

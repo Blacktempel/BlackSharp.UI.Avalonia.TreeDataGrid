@@ -1,0 +1,420 @@
+﻿using BlackSharp.UI.Avalonia.TreeDataGrid.Experimental.Data.Core;
+using BlackSharp.UI.Avalonia.TreeDataGrid.Utils;
+using System.Collections;
+using System.Collections.Specialized;
+
+namespace BlackSharp.UI.Avalonia.TreeDataGrid.Models
+{
+    /// <summary>
+    /// Exposes a sortable collection of models as anonymous rows.
+    /// </summary>
+    /// <typeparam name="TModel">The model type.</typeparam>
+    /// <remarks>
+    /// In a flat grid where rows cannot be resized, it is not necessary to persist any information
+    /// about rows; the same row object can be updated and reused when a new row is requested.
+    /// </remarks>
+    internal class AnonymousSortableRows<TModel> : ReadOnlyListBase<IRow<TModel>>, IRows, IDisposable
+    {
+        #region Constructor
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="AnonymousSortableRows{TModel}"/> class.
+        /// </summary>
+        /// <param name="items">The underlying items source view.</param>
+        /// <param name="comparer">An optional comparer used to sort the rows.</param>
+        public AnonymousSortableRows(
+            TreeDataGridItemsSourceView<TModel> items,
+            IComparer<TModel>? comparer)
+        {
+            _items                   = items;
+            _items.CollectionChanged += OnItemsCollectionChanged;
+            _comparer                = comparer;
+            _row                     = new AnonymousRow<TModel>();
+            _compareItemsByIndex     = CompareItemsByIndex;
+        }
+
+        #endregion
+
+        #region Fields
+
+        private readonly AnonymousRow<TModel>       _row;
+
+        private readonly Comparison<int>            _compareItemsByIndex;
+
+        private TreeDataGridItemsSourceView<TModel> _items;
+
+        private IComparer<TModel>?                  _comparer;
+
+        private List<int>?                          _sortedIndexes;
+
+        #endregion
+
+        #region Properties
+
+        /// <summary>
+        /// Gets the row at the specified index.
+        /// </summary>
+        /// <param name="index">The zero-based row index.</param>
+        public override IRow<TModel> this[int index]
+        {
+            get
+            {
+                if (_comparer is null)
+                {
+                    return _row.Update(index, _items[index]);
+                }
+
+                _sortedIndexes ??= CreateSortedIndexes();
+                var modelIndex = _sortedIndexes[index];
+
+                return _row.Update(modelIndex, _items[modelIndex]);
+            }
+        }
+
+        /// <summary>
+        /// Gets the number of rows exposed by this collection.
+        /// </summary>
+        public override int Count => _sortedIndexes?.Count ?? _items.Count;
+
+        #endregion
+
+        #region Public
+
+        /// <inheritdoc />
+        public void Dispose()
+        {
+            SetItems(TreeDataGridItemsSourceView<TModel>.Empty);
+            _row.Update(-1, default!);
+            GC.SuppressFinalize(this);
+        }
+
+        /// <summary>
+        /// Returns the row index and Y-offset for a given vertical position within the rows.
+        /// </summary>
+        /// <param name="y">The vertical offset to query.</param>
+        public (int index, double y) GetRowAt(double y)
+        {
+            // Rows in an AnonymousSortableRows collection have Auto height so we only
+            // know the start position of the first row.
+            if (MathWrapper.IsZero(y))
+            {
+                return (0, 0);
+            }
+
+            return (-1, -1);
+        }
+
+        /// <summary>
+        /// Returns an enumerator that iterates through the collection of rows.
+        /// </summary>
+        public override IEnumerator<IRow<TModel>> GetEnumerator()
+        {
+            for (var i = 0; i < Count; ++i)
+            {
+                yield return this[i];
+            }
+        }
+
+        /// <summary>
+        /// Creates and returns a cell for the specified column and row index.
+        /// </summary>
+        /// <param name="column">The column for which to create the cell. Must implement <see cref="IColumn{TModel}"/> to support cell creation.</param>
+        /// <param name="columnIndex">The zero-based index of the column within the table.</param>
+        /// <param name="rowIndex">The zero-based index of the row for which the cell is created.</param>
+        /// <returns>An instance of <see cref="ICell"/> representing the cell at the specified column and row.</returns>
+        /// <exception cref="InvalidOperationException">Thrown if the specified <paramref name="column"/> does not implement <see cref="IColumn{TModel}"/>.</exception>
+        public ICell RealizeCell(IColumn column, int columnIndex, int rowIndex)
+        {
+            if (column is IColumn<TModel> c)
+            {
+                return c.CreateCell(this[rowIndex]);
+            }
+            else
+            {
+                throw new InvalidOperationException("Invalid column.");
+            }
+        }
+
+        /// <summary>
+        /// Replaces the underlying items source view used by the collection.
+        /// </summary>
+        public void SetItems(TreeDataGridItemsSourceView<TModel> items)
+        {
+            _items.CollectionChanged -= OnItemsCollectionChanged;
+            _items                   = items;
+
+            if (!ReferenceEquals(items, TreeDataGridItemsSourceView<TModel>.Empty))
+            {
+                _items.CollectionChanged += OnItemsCollectionChanged;
+            }
+
+            OnItemsCollectionChanged(null, CollectionExtensions.ResetEvent);
+        }
+
+        /// <summary>
+        /// Converts a model index into the corresponding row index within this collection.
+        /// </summary>
+        public int ModelIndexToRowIndex(IndexPath modelIndex)
+        {
+            if (modelIndex.Count != 1)
+            {
+                return -1;
+            }
+
+            var i = modelIndex[0];
+
+            if ((uint)i >= (uint)_items.Count)
+            {
+                return -1;
+            }
+
+            if (_sortedIndexes is null)
+            {
+                return i;
+            }
+            else
+            {
+                return SortHelper<int>.BinarySearch(_sortedIndexes, i, _compareItemsByIndex);
+            }
+        }
+
+        /// <summary>
+        /// Converts a row index to the corresponding model index.
+        /// </summary>
+        public IndexPath RowIndexToModelIndex(int rowIndex) => _sortedIndexes?[rowIndex] ?? rowIndex;
+
+        /// <summary>
+        /// Applies a comparer to sort the rows exposed by the collection.
+        /// </summary>
+        public void Sort(IComparer<TModel>? comparer)
+        {
+            _comparer      = comparer;
+            _sortedIndexes = comparer is object ? CreateSortedIndexes() : null;
+        }
+
+        /// <summary>
+        /// Сleans up a cell that was previously created.
+        /// </summary>
+        public void UnrealizeCell(ICell cell, int columnIndex, int rowIndex)
+        {
+            (cell as IDisposable)?.Dispose();
+        }
+
+        #endregion
+
+        #region Private
+
+        private List<int> CreateSortedIndexes()
+        {
+            return StableSort.SortedMap(_items, _compareItemsByIndex);
+        }
+
+        private void OnItemsCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
+        {
+            if (_comparer is null)
+            {
+                OnItemsCollectionChangedUnsorted(e);
+            }
+            else
+            {
+                OnItemsCollectionChangedSorted(e);
+            }
+        }
+
+        private void OnItemsCollectionChangedUnsorted(NotifyCollectionChangedEventArgs e)
+        {
+            if (CollectionChanged is null)
+            {
+                return;
+            }
+
+            var ev = e.Action switch
+            {
+                NotifyCollectionChangedAction.Add => new NotifyCollectionChangedEventArgs(
+                    e.Action,
+                    new AnonymousRowItems<TModel>(e.NewItems!),
+                    e.NewStartingIndex),
+                NotifyCollectionChangedAction.Remove => new NotifyCollectionChangedEventArgs(
+                    e.Action,
+                    new AnonymousRowItems<TModel>(e.OldItems!),
+                    e.OldStartingIndex),
+                NotifyCollectionChangedAction.Replace => new NotifyCollectionChangedEventArgs(
+                    e.Action,
+                    new AnonymousRowItems<TModel>(e.NewItems!),
+                    new AnonymousRowItems<TModel>(e.OldItems!),
+                    e.OldStartingIndex),
+                NotifyCollectionChangedAction.Move => new NotifyCollectionChangedEventArgs(
+                    e.Action,
+                    new AnonymousRowItems<TModel>(e.NewItems!),
+                    e.NewStartingIndex,
+                    e.OldStartingIndex),
+                NotifyCollectionChangedAction.Reset => e,
+                _ => throw new NotSupportedException(),
+            };
+
+            CollectionChanged(this, ev);
+        }
+
+        private void OnItemsCollectionChangedSorted(NotifyCollectionChangedEventArgs e)
+        {
+            // If the rows have not yet been read then the type of collection change shouldn't be
+            // important; the only thing we need to do is inform the presenter that the collection
+            // has changed so that it can display the new items if the previous items were empty.
+            if (_sortedIndexes is null)
+            {
+                // A move cannot change the count, and no previous row order has been materialized yet.
+                if (e.Action != NotifyCollectionChangedAction.Move)
+                {
+                    CollectionChanged?.Invoke(this, CollectionExtensions.ResetEvent);
+                }
+
+                return;
+            }
+
+            void Add(int startIndex, int count)
+            {
+                for (var i = 0; i < _sortedIndexes.Count; i++)
+                {
+                    var ix = _sortedIndexes[i];
+
+                    if (ix >= startIndex)
+                    {
+                        _sortedIndexes[i] = ix + count;
+                    }
+                }
+
+                for (var i = 0; i < count; ++i)
+                {
+                    var index = SortHelper<int>.BinarySearch(_sortedIndexes, startIndex + i, _compareItemsByIndex);
+
+                    if (index < 0)
+                    {
+                        index = ~index;
+                    }
+
+                    _sortedIndexes.Insert(index, startIndex + i);
+
+                    CollectionChanged?.Invoke(
+                        this,
+                        new NotifyCollectionChangedEventArgs(
+                            NotifyCollectionChangedAction.Add,
+                            _row.Update(startIndex + i, _items[startIndex + i]),
+                            index));
+                }
+            }
+
+            void Remove(int startIndex, IList removed)
+            {
+                var count    = removed.Count;
+                var endIndex = startIndex + count;
+
+                for (var i = 0; i < _sortedIndexes.Count; i++)
+                {
+                    var ix = _sortedIndexes[i];
+
+                    if (ix >= startIndex && ix < endIndex)
+                    {
+                        _sortedIndexes.RemoveAt(i);
+
+                        CollectionChanged?.Invoke(
+                            this,
+                            new NotifyCollectionChangedEventArgs(
+                                NotifyCollectionChangedAction.Remove,
+                                _row.Update(ix, (TModel)removed[ix - startIndex]!),
+                                i));
+                        --i;
+                    }
+                    else if (ix >= endIndex)
+                    {
+                        _sortedIndexes[i] = ix - count;
+                    }
+                }
+            }
+
+            switch (e.Action)
+            {
+                case NotifyCollectionChangedAction.Add:
+                    Add(e.NewStartingIndex, e.NewItems!.Count);
+                    break;
+                case NotifyCollectionChangedAction.Remove:
+                    Remove(e.OldStartingIndex, e.OldItems!);
+                    break;
+                case NotifyCollectionChangedAction.Replace:
+                    Remove(e.OldStartingIndex, e.OldItems!);
+                    Add(e.NewStartingIndex, e.NewItems!.Count);
+                    break;
+                case NotifyCollectionChangedAction.Move:
+                    MoveSortedRows(e.OldStartingIndex, e.NewStartingIndex, e.OldItems!.Count);
+                    break;
+                case NotifyCollectionChangedAction.Reset:
+                    _sortedIndexes = CreateSortedIndexes();
+                    CollectionChanged?.Invoke(this, e);
+                    break;
+                default:
+                    throw new NotSupportedException();
+            }
+        }
+
+        private void MoveSortedRows(int oldIndex, int newIndex, int count)
+        {
+            for (var i = 0; i < _sortedIndexes!.Count; ++i)
+            {
+                _sortedIndexes[i] = CollectionMove.MapIndex(_sortedIndexes[i], oldIndex, newIndex, count);
+            }
+
+            CollectionMove.ApplySortOrder(_sortedIndexes, CreateSortedIndexes(), (from, to, length) =>
+            {
+                if (CollectionChanged is not null)
+                {
+                    var moved = new TModel[length];
+
+                    for (var i = 0; i < length; ++i)
+                    {
+                        moved[i] = _items[_sortedIndexes[to + i]];
+                    }
+
+                    CollectionChanged(this, new NotifyCollectionChangedEventArgs(
+                        NotifyCollectionChangedAction.Move, new AnonymousRowItems<TModel>(moved), to, from));
+                }
+            });
+        }
+
+        private int CompareItemsByIndex(int index1, int index2)
+        {
+            var c = _comparer!.Compare(_items[index1], _items[index2]);
+
+            if (c == 0)
+            {
+                return index1 - index2; // ensure stability of sort
+            }
+
+            // -c will result in a negative value for int.MinValue (-int.MinValue == int.MinValue).
+            // Flipping keys earlier is more likely to trigger something strange in a comparer,
+            // particularly as it comes to the sort being stable.
+            return (c > 0) ? 1 : -1;
+        }
+
+        #endregion
+
+        #region IEnumerable<IRow>
+
+        IEnumerator<IRow> IEnumerable<IRow>.GetEnumerator() => GetEnumerator();
+
+        #endregion
+
+        #region IReadOnlyList<IRow>
+
+        IRow IReadOnlyList<IRow>.this[int index] => this[index];
+
+        #endregion
+
+        #region Events
+
+        /// <summary>
+        /// Occurs when the rows collection changes.
+        /// </summary>
+        public event NotifyCollectionChangedEventHandler? CollectionChanged;
+
+        #endregion
+    }
+}

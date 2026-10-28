@@ -1,0 +1,280 @@
+﻿using Avalonia.Controls;
+using Avalonia.Data;
+using BlackSharp.UI.Avalonia.TreeDataGrid.Experimental.Data;
+using BlackSharp.UI.Avalonia.TreeDataGrid.Experimental.Data.Core;
+using System.ComponentModel;
+
+namespace BlackSharp.UI.Avalonia.TreeDataGrid.Models
+{
+    /// <summary>
+    /// Base class for columns which select cell values from a model.
+    /// </summary>
+    /// <typeparam name="TModel">The model type.</typeparam>
+    internal abstract class ColumnBase<TModel> : NotifyingBase, IColumn<TModel>, IUpdateColumnLayout
+        where TModel : class
+    {
+        #region Constructor
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="ColumnBase{TModel, TValue}"/> class.
+        /// </summary>
+        /// <param name="header">The column header.</param>
+        /// <param name="width">
+        /// The column width. If null defaults to <see cref="GridLength.Auto"/>.
+        /// </param>
+        /// <param name="options">Additional column options.</param>
+        public ColumnBase(
+            object? header,
+            GridLength? width,
+            ColumnOptions<TModel> options)
+        {
+            _header = header;
+            Options = options;
+            SetWidth(width ?? GridLength.Auto);
+
+            if (options.IsReadOnlyGetter is { } isReadOnlyGetter)
+            {
+                _isReadOnlyBinding = TypedBinding<TModel>.OneWay(isReadOnlyGetter);
+            }
+        }
+
+        #endregion
+
+        #region Fields
+
+        private double                      _actualWidth             = double.NaN;
+
+        private GridLength                  _width;
+
+        private double                      _autoWidth               = double.NaN;
+
+        private double                      _starWidth               = double.NaN;
+
+        private bool                        _starWidthWasConstrained;
+
+        private object?                     _header;
+
+        private ListSortDirection?          _sortDirection;
+
+        private TypedBinding<TModel, bool>? _isReadOnlyBinding;
+
+        #endregion
+
+        #region Properties
+
+        /// <summary>
+        /// Gets the actual width of the column after measurement.
+        /// </summary>
+        public double ActualWidth
+        {
+            get => _actualWidth;
+            private set => RaiseAndSetIfChanged(ref _actualWidth, value);
+        }
+
+        /// <summary>
+        /// Gets the width of the column.
+        /// </summary>
+        /// <remarks>
+        /// To set the column width use <see cref="IColumns.SetColumnWidth(int, GridLength)"/>.
+        /// </remarks>
+        public GridLength Width
+        {
+            get => _width;
+            private set => RaiseAndSetIfChanged(ref _width, value);
+        }
+
+        /// <summary>
+        /// Gets or sets the column header.
+        /// </summary>
+        public object? Header
+        {
+            get => _header;
+            set => RaiseAndSetIfChanged(ref _header, value);
+        }
+
+        /// <summary>
+        /// Gets the column options.
+        /// </summary>
+        public ColumnOptions<TModel> Options { get; }
+
+        /// <summary>
+        /// Gets or sets the sort direction indicator that will be displayed on the column.
+        /// </summary>
+        /// <remarks>
+        /// Note that changing this property does not change the sorting of the data, it is only
+        /// used to display a sort direction indicator. To sort data according to a column use
+        /// <see cref="ITreeDataGridSource.SortBy(IColumn, ListSortDirection)"/>.
+        /// </remarks>
+        public ListSortDirection? SortDirection
+        {
+            get => _sortDirection;
+            set => RaiseAndSetIfChanged(ref _sortDirection, value);
+        }
+
+        /// <summary>
+        /// Gets or sets whether the column is visible.
+        /// </summary>
+        public bool IsVisible
+        {
+            get => Options.IsVisible;
+            set
+            {
+                if (Options.IsVisible != value)
+                {
+                    Options.IsVisible = value;
+                    RaisePropertyChanged(nameof(IsVisible));
+                }
+            }
+        }
+
+        /// <summary>
+        /// Gets or sets a user-defined object attached to the column.
+        /// </summary>
+        public object? Tag { get; set; }
+
+        #endregion
+
+        #region Public
+
+        /// <summary>
+        /// Creates a cell for this column on the specified row.
+        /// </summary>
+        /// <param name="row">The row.</param>
+        /// <returns>The cell.</returns>
+        public abstract ICell CreateCell(IRow<TModel> row);
+
+        public abstract Comparison<TModel?>? GetComparison(ListSortDirection direction);
+
+        #endregion
+
+        #region Protected
+
+        protected IObservable<BindingValue<bool>> BuildIsReadOnlyObservable(TModel model, bool isCollumnReadOnly)
+        {
+            if (!isCollumnReadOnly && _isReadOnlyBinding is not null)
+            {
+                return _isReadOnlyBinding.Instance(model);
+            }
+
+            return ObservableEx.SingleValue(new BindingValue<bool>(isCollumnReadOnly));
+        }
+
+        #endregion
+
+        #region Private
+
+        private double CoerceActualWidth(double width)
+        {
+            if (!IsVisible)
+            {
+                return 0;
+            }
+
+            width = Options.MinWidth.GridUnitType switch
+            {
+                GridUnitType.Auto  => Math.Max(width, NonNaN(_autoWidth)),
+                GridUnitType.Pixel => Math.Max(width, Options.MinWidth.Value),
+                GridUnitType.Star  => throw new NotImplementedException(),
+                _                  => width
+            };
+
+            return Options.MaxWidth?.GridUnitType switch
+            {
+                GridUnitType.Auto  => Math.Min(width, NonNaN(_autoWidth)),
+                GridUnitType.Pixel => Math.Min(width, Options.MaxWidth.Value.Value),
+                GridUnitType.Star  => throw new NotImplementedException(),
+                _                  => width
+            };
+        }
+
+        private void SetWidth(GridLength width)
+        {
+            RaiseAndSetIfChanged(ref _width, width, nameof(Width));
+
+            if (width.IsAbsolute)
+            {
+                ActualWidth = width.Value;
+            }
+        }
+
+        private static double NonNaN(double v) => double.IsNaN(v) ? 0 : v;
+
+        #endregion
+
+        #region IColumn
+
+        bool? IColumn.CanUserResize => Options.CanUserResizeColumn;
+
+        #endregion
+
+        #region IUpdateColumnLayout
+
+        double IUpdateColumnLayout.MinActualWidth => CoerceActualWidth(0);
+
+        double IUpdateColumnLayout.MaxActualWidth =>
+            IsVisible
+             ? CoerceActualWidth(double.PositiveInfinity)
+             : 0;
+
+        bool IUpdateColumnLayout.StarWidthWasConstrained => _starWidthWasConstrained;
+
+        double IUpdateColumnLayout.CellMeasured(double width, int rowIndex)
+        {
+            if (!Options.IsVisible)
+            {
+                return 0;
+            }
+
+            _autoWidth = Math.Max(NonNaN(_autoWidth), CoerceActualWidth(width));
+
+            return Width.GridUnitType == GridUnitType.Auto || double.IsNaN(ActualWidth) ?
+                _autoWidth : ActualWidth;
+        }
+
+        void IUpdateColumnLayout.CalculateStarWidth(double availableWidth, double totalStars)
+        {
+            if (!Width.IsStar)
+            {
+                throw new InvalidOperationException("Attempt to calculate star width on a non-star column.");
+            }
+
+            var width = (availableWidth / totalStars) * Width.Value;
+
+            _starWidth               = CoerceActualWidth(width);
+            _starWidthWasConstrained = !MathWrapper.AreClose(_starWidth, width);
+        }
+
+        bool IUpdateColumnLayout.CommitActualWidth()
+        {
+            var width = Width.GridUnitType switch
+            {
+                GridUnitType.Auto  => _autoWidth,
+                GridUnitType.Pixel => CoerceActualWidth(Width.Value),
+                GridUnitType.Star  => _starWidth,
+                _                  => throw new NotSupportedException(),
+            };
+
+            var oldWidth = ActualWidth;
+
+            ActualWidth              = width;
+            _starWidthWasConstrained = false;
+
+            // MathUtilites.AreClose will return true for this condition.
+            // If the user has auto columns that are not yet realized, then the
+            // _autoWidth will remain NaN.
+            // This will lead to an endless layout cycle causing the whole UI
+            // to have degraded performance, until all columns have an actual value
+            // set for _autoWidth.
+            if (double.IsNaN(oldWidth) && double.IsNaN(ActualWidth))
+            {
+                return false;
+            }
+
+            return !MathWrapper.AreClose(oldWidth, ActualWidth);
+        }
+
+        void IUpdateColumnLayout.SetWidth(GridLength width) => SetWidth(width);
+
+        #endregion
+    }
+}

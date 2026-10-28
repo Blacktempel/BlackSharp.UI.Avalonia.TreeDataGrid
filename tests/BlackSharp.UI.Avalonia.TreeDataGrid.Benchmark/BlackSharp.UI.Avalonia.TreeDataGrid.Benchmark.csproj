@@ -1,0 +1,33 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <AssemblyName>BlackSharp.UI.Avalonia.TreeDataGrid.Benchmark</AssemblyName>
+    <RootNamespace>BlackSharp.UI.Avalonia.TreeDataGrid.Benchmark</RootNamespace>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <NoWarn>$(NoWarn);CS1591</NoWarn>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <TargetFramework>net10.0</TargetFramework>
+    <OutputType>Exe</OutputType>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Avalonia.Themes.Fluent" Version="12.1.4" />
+    <PackageReference Include="Avalonia.Headless" Version="12.1.4" />
+    <PackageReference Include="Avalonia.Skia" Version="12.1.4" />
+    <PackageReference Include="Avalonia.Fonts.Inter" Version="12.1.4" />
+    <PackageReference Include="BenchmarkDotNet" Version="0.15.8" />
+
+    <Compile Include="..\BlackSharp.UI.Avalonia.TreeDataGrid.Tests\TestApplication.cs" />
+    <Compile Include="..\BlackSharp.UI.Avalonia.TreeDataGrid.Tests\TestWindow.cs" />
+    <Compile Include="..\BlackSharp.UI.Avalonia.TreeDataGrid.Tests\TestTemplates.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\BlackSharp.UI.Avalonia.TreeDataGrid\BlackSharp.UI.Avalonia.TreeDataGrid.csproj" />
+  </ItemGroup>
+
+</Project>
