@@ -99,6 +99,23 @@ internal static class PerformanceProfile
             }
         }));
 
+        var wideRoot = new Node
+        {
+            Children = new ObservableCollection<Node>(Enumerable.Range(0, 2500).Select(_ => new Node())),
+        };
+        var wideItems = new[] { wideRoot }.Concat(Enumerable.Range(0, 2500).Select(_ => new Node())).ToArray();
+        using var wideTree = new HierarchicalTreeDataGridSource<Node>(wideItems)
+            .WithHierarchicalExpanderTextColumn(x => x.Name, x => x.Children);
+        _ = wideTree.Rows.Count;
+        results.Add(Measure("expand-collapse-wide-subtree", 3, () =>
+        {
+            for (var i = 0; i < 3; ++i)
+            {
+                wideTree.Expand(0);
+                wideTree.Collapse(0);
+            }
+        }));
+
         Console.WriteLine(JsonSerializer.Serialize(new
         {
             Runtime = Environment.Version.ToString(),

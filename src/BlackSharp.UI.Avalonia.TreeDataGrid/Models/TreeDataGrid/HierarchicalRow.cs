@@ -66,6 +66,11 @@ namespace BlackSharp.UI.Avalonia.TreeDataGrid.Models
         public IReadOnlyList<HierarchicalRow<TModel>>? Children => _isExpanded ? _childRows : null;
 
         /// <summary>
+        /// Gets child rows retained while this row is collapsed.
+        /// </summary>
+        internal IReadOnlyList<HierarchicalRow<TModel>>? CachedChildren => _childRows;
+
+        /// <summary>
         /// Gets the index of the model relative to its parent.
         /// </summary>
         /// <remarks>

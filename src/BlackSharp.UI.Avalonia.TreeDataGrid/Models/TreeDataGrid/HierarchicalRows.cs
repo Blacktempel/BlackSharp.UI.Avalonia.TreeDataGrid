@@ -238,20 +238,34 @@ namespace BlackSharp.UI.Avalonia.TreeDataGrid.Models
         {
             _ignoreCollectionChanges = true;
 
+            var changed = false;
+
             try
             {
-                row?.IsExpanded = predicate(row.Model);
+                if (row is not null)
+                {
+                    var wasExpanded = row.IsExpanded;
+                    row.IsExpanded = predicate(row.Model);
 
-                var children = row is null ? _roots : row.Children;
+                    changed = wasExpanded != row.IsExpanded;
+                }
+
+                var children = row is null ? _roots : row.IsExpanded ? row.Children : row.CachedChildren;
 
                 if (children is not null)
                 {
-                    ExpandCollapseRecursiveCore(children, predicate);
+                    changed |= ExpandCollapseRecursiveCore(children, predicate);
                 }
             }
             finally
             {
                 _ignoreCollectionChanges = false;
+            }
+
+            // Avoid rebuilding the flattened rows and invalidating virtualized presenters for a no-op.
+            if (!changed)
+            {
+                return;
             }
 
             _flattenedRows.Clear();
@@ -291,11 +305,9 @@ namespace BlackSharp.UI.Avalonia.TreeDataGrid.Models
 
         private void InitializeRows()
         {
-            var i = 0;
-
             foreach (var model in _roots)
             {
-                i += AddRowsAndDescendants(i, model);
+                AppendRowsAndDescendants(_flattenedRows, model);
             }
 
             foreach (var row in _flattenedRows.ToArray())
@@ -304,49 +316,52 @@ namespace BlackSharp.UI.Avalonia.TreeDataGrid.Models
             }
         }
 
-        private int AddRowsAndDescendants(int index, HierarchicalRow<TModel> row)
+        private static void AppendRowsAndDescendants(List<HierarchicalRow<TModel>> rows, HierarchicalRow<TModel> row)
         {
-            var i = index;
-
-            _flattenedRows.Insert(i++, row);
+            rows.Add(row);
 
             if (row.Children is object)
             {
                 foreach (var childRow in row.Children)
                 {
-                    i += AddRowsAndDescendants(i, childRow);
+                    AppendRowsAndDescendants(rows, childRow);
                 }
             }
-
-            return i - index;
         }
 
-        private static void ExpandCollapseRecursiveCore(IReadOnlyList<HierarchicalRow<TModel>> rows, Func<TModel, bool> predicate)
+        private static bool ExpandCollapseRecursiveCore(IReadOnlyList<HierarchicalRow<TModel>> rows, Func<TModel, bool> predicate)
         {
+            var changed = false;
+
             for (var i = 0; i < rows.Count; ++i)
             {
-                var row    = rows[i];
-                var expand = predicate(row.Model);
+                var row         = rows[i];
+                var expand      = predicate(row.Model);
+                var wasExpanded = row.IsExpanded;
 
                 if (expand)
                 {
                     row.IsExpanded = true;
+                    changed |= wasExpanded != row.IsExpanded;
 
                     if (row.Children is { } children)
                     {
-                        ExpandCollapseRecursiveCore(children, predicate);
+                        changed |= ExpandCollapseRecursiveCore(children, predicate);
                     }
                 }
                 else
                 {
-                    if (row.Children is { } children)
+                    if (row.CachedChildren is { } children)
                     {
-                        ExpandCollapseRecursiveCore(children, predicate);
+                        changed |= ExpandCollapseRecursiveCore(children, predicate);
                     }
 
                     row.IsExpanded = false;
+                    changed |= wasExpanded != row.IsExpanded;
                 }
             }
+
+            return changed;
         }
 
         private void OnCollectionChanged(in IndexPath parentIndex, NotifyCollectionChangedEventArgs e)
@@ -363,16 +378,18 @@ namespace BlackSharp.UI.Avalonia.TreeDataGrid.Models
                     return;
                 }
 
-                var start = index;
+                var capacity = items is IReadOnlyCollection<HierarchicalRow<TModel>> collection ? collection.Count : 0;
+                var addedRows = new List<HierarchicalRow<TModel>>(capacity);
 
                 foreach (HierarchicalRow<TModel> row in items)
                 {
-                    index += AddRowsAndDescendants(index, row);
+                    AppendRowsAndDescendants(addedRows, row);
                 }
 
-                if (index > start)
+                if (addedRows.Count > 0)
                 {
-                    var addedRows = _flattenedRows.GetRange(start, index - start);
+                    // Insert the whole subtree at once so following rows are shifted only once.
+                    _flattenedRows.InsertRange(index, addedRows);
 
                     if (raise)
                     {
@@ -380,8 +397,8 @@ namespace BlackSharp.UI.Avalonia.TreeDataGrid.Models
                             this,
                             new NotifyCollectionChangedEventArgs(
                                 NotifyCollectionChangedAction.Add,
-                                new ListSpan(_flattenedRows, start, index - start),
-                                start));
+                                new ListSpan(_flattenedRows, index, addedRows.Count),
+                                index));
                     }
 
                     // New rows need their model bindings even when the source was initially empty.

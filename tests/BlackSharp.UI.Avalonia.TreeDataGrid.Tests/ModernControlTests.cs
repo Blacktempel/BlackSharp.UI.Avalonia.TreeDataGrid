@@ -2,6 +2,7 @@
 using Avalonia.Automation.Peers;
 using Avalonia.Automation.Provider;
 using Avalonia.Controls;
+using Avalonia.Controls.Primitives;
 using Avalonia.Controls.Templates;
 using Avalonia.Headless;
 using Avalonia.Headless.XUnit;
@@ -23,6 +24,84 @@ namespace BlackSharp.UI.Avalonia.TreeDataGrid.Tests
     public class ModernControlTests
     {
         #region Public
+
+        [AvaloniaFact]
+        public void ScrollViewer_Tracks_AllowAutoHide_On_Grid()
+        {
+            // Arrange
+            using var source = CreateInteractionSource(new Model());
+            var grid = new TreeDataGrid { Source = source };
+            ScrollViewer.SetAllowAutoHide(grid, false);
+
+            // Act
+            var window = Show(grid);
+
+            try
+            {
+                var scrollViewer = Assert.IsType<ScrollViewer>(grid.Scroll);
+
+                // Assert
+                Assert.False(scrollViewer.AllowAutoHide);
+
+                // Act
+                ScrollViewer.SetAllowAutoHide(grid, true);
+                Layout(window);
+
+                // Assert
+                Assert.True(scrollViewer.AllowAutoHide);
+            }
+            finally
+            {
+                window.Close();
+            }
+        }
+
+        [AvaloniaFact]
+        public void ScrollViewer_Tracks_Scrolling_Properties_On_Grid()
+        {
+            // Arrange
+            using var source = CreateInteractionSource(new Model());
+            var grid = new TreeDataGrid { Source = source };
+
+            // Act
+            var window = Show(grid);
+
+            try
+            {
+                var scrollViewer = Assert.IsType<ScrollViewer>(grid.Scroll);
+
+                // Assert
+                Assert.Equal(ScrollBarVisibility.Auto, scrollViewer.HorizontalScrollBarVisibility);
+                Assert.Equal(ScrollBarVisibility.Auto, scrollViewer.VerticalScrollBarVisibility);
+
+                // Act
+                ScrollViewer.SetHorizontalScrollBarVisibility(grid, ScrollBarVisibility.Disabled);
+                ScrollViewer.SetVerticalScrollBarVisibility(grid, ScrollBarVisibility.Visible);
+                ScrollViewer.SetHorizontalSnapPointsType(grid, SnapPointsType.Mandatory);
+                ScrollViewer.SetVerticalSnapPointsType(grid, SnapPointsType.MandatorySingle);
+                ScrollViewer.SetHorizontalSnapPointsAlignment(grid, SnapPointsAlignment.Center);
+                ScrollViewer.SetVerticalSnapPointsAlignment(grid, SnapPointsAlignment.Far);
+                ScrollViewer.SetIsScrollChainingEnabled(grid, false);
+                ScrollViewer.SetIsScrollInertiaEnabled(grid, false);
+                ScrollViewer.SetIsDeferredScrollingEnabled(grid, true);
+                Layout(window);
+
+                // Assert
+                Assert.Equal(ScrollBarVisibility.Disabled, scrollViewer.HorizontalScrollBarVisibility);
+                Assert.Equal(ScrollBarVisibility.Visible, scrollViewer.VerticalScrollBarVisibility);
+                Assert.Equal(SnapPointsType.Mandatory, scrollViewer.HorizontalSnapPointsType);
+                Assert.Equal(SnapPointsType.MandatorySingle, scrollViewer.VerticalSnapPointsType);
+                Assert.Equal(SnapPointsAlignment.Center, scrollViewer.HorizontalSnapPointsAlignment);
+                Assert.Equal(SnapPointsAlignment.Far, scrollViewer.VerticalSnapPointsAlignment);
+                Assert.False(scrollViewer.IsScrollChainingEnabled);
+                Assert.False(scrollViewer.IsScrollInertiaEnabled);
+                Assert.True(scrollViewer.IsDeferredScrollingEnabled);
+            }
+            finally
+            {
+                window.Close();
+            }
+        }
 
         [AvaloniaTheory]
         [InlineData(false, 0)]

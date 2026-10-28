@@ -679,6 +679,48 @@ namespace BlackSharp.UI.Avalonia.TreeDataGrid.Tests
                 Assert.Equal(8, target.Rows.Count);
             }
 
+            [AvaloniaFact]
+            public void CollapseAll_Collapses_Cached_Descendants_Of_Already_Collapsed_Roots()
+            {
+                // Arrange
+                var target = CreateTarget(CreateData(1, 1, 1), false);
+                target.ExpandAll();
+                target.Collapse(new IndexPath(0));
+                Assert.Single(target.Rows);
+
+                // Act
+                target.CollapseAll();
+                target.Expand(new IndexPath(0));
+
+                // Assert
+                Assert.Equal(2, target.Rows.Count);
+            }
+
+            [AvaloniaFact]
+            public void Repeating_Expansion_State_Does_Not_Reset_Visible_Rows()
+            {
+                // Arrange
+                var target = CreateTarget(CreateData(1, 1, 1), false);
+                var resets = 0;
+                target.Rows.CollectionChanged += (_, e) =>
+                {
+                    if (e.Action == NotifyCollectionChangedAction.Reset)
+                    {
+                        ++resets;
+                    }
+                };
+
+                // Act
+                target.CollapseAll();
+                target.ExpandAll();
+                target.ExpandAll();
+                target.CollapseAll();
+                target.CollapseAll();
+
+                // Assert
+                Assert.Equal(2, resets);
+            }
+
             #endregion
         }
 

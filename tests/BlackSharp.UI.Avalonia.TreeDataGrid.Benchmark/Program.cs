@@ -1,6 +1,7 @@
 ﻿using BenchmarkDotNet.Configs;
 using BenchmarkDotNet.Diagnosers;
 using BenchmarkDotNet.Running;
+using System.Diagnostics;
 
 namespace BlackSharp.UI.Avalonia.TreeDataGrid.Benchmark;
 
@@ -26,6 +27,12 @@ internal class Program
         {
             Console.Error.WriteLine(exception);
             Environment.ExitCode = 1;
+        }
+
+        if (Debugger.IsAttached)
+        {
+            Console.WriteLine("Press enter to exit...");
+            Console.ReadLine();
         }
     }
 
