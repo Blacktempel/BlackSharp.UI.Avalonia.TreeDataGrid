@@ -1,4 +1,7 @@
-﻿using Avalonia.Automation.Peers;
+﻿using Avalonia.Automation;
+using Avalonia.Automation.Peers;
+using Avalonia.Controls;
+using Avalonia.VisualTree;
 using BlackSharp.UI.Avalonia.TreeDataGrid.Primitives;
 
 namespace BlackSharp.UI.Avalonia.TreeDataGrid.Automation.Peers
@@ -27,7 +30,42 @@ namespace BlackSharp.UI.Avalonia.TreeDataGrid.Automation.Peers
 
         protected override AutomationControlType GetAutomationControlTypeCore() => AutomationControlType.DataItem;
 
-        protected override string GetNameCore() => Owner.Model?.Value?.ToString() ?? string.Empty;
+        /// <inheritdoc/>
+        protected override string GetNameCore()
+        {
+            var name = base.GetNameCore();
+
+            if (!string.IsNullOrWhiteSpace(name))
+            {
+                return name;
+            }
+
+            if (Owner is TreeDataGridTemplateCell or TreeDataGridExpanderCell)
+            {
+                // Read accessible names and text from visible template controls.
+                foreach (var descendant in Owner.GetVisualDescendants())
+                {
+                    if (descendant is Control { IsEffectivelyVisible: true } control)
+                    {
+                        var controlName = AutomationProperties.GetName(control);
+
+                        if (!string.IsNullOrWhiteSpace(controlName))
+                        {
+                            return controlName;
+                        }
+
+                        if (control is TextBlock { Text: { } text } && !string.IsNullOrWhiteSpace(text))
+                        {
+                            return text;
+                        }
+                    }
+                }
+
+                return string.Empty;
+            }
+
+            return Owner.Model?.Value?.ToString() ?? string.Empty;
+        }
 
         #endregion
     }

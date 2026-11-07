@@ -94,8 +94,30 @@ namespace BlackSharp.UI.Avalonia.TreeDataGrid.Automation.Peers
 
         protected override AutomationControlType GetAutomationControlTypeCore() => AutomationControlType.DataItem;
 
-        protected override string GetNameCore() =>
-            Owner.CellsPresenter?.GetRealizedElements().OfType<TreeDataGridCell>().FirstOrDefault()?.Model?.Value?.ToString() ?? Owner.Model?.ToString() ?? string.Empty;
+        /// <inheritdoc/>
+        protected override string GetNameCore()
+        {
+            var name = base.GetNameCore();
+
+            if (!string.IsNullOrWhiteSpace(name))
+            {
+                return name;
+            }
+
+            if (Owner.CellsPresenter is { } presenter)
+            {
+                // Read the accessible name of each realized cell in display order.
+                foreach (var element in presenter.GetRealizedElements())
+                {
+                    if (element is TreeDataGridCell cell && GetOrCreate(cell).GetName() is { } cellName && !string.IsNullOrWhiteSpace(cellName))
+                    {
+                        return cellName;
+                    }
+                }
+            }
+
+            return Owner.Model?.ToString() ?? string.Empty;
+        }
 
         protected override IReadOnlyList<AutomationPeer> GetOrCreateChildrenCore() => GetChildrenCore();
 

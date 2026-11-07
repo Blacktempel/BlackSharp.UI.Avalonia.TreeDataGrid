@@ -1,9 +1,11 @@
 ﻿using Avalonia;
+using Avalonia.Automation;
 using Avalonia.Automation.Peers;
 using Avalonia.Automation.Provider;
 using Avalonia.Controls;
 using Avalonia.Controls.Primitives;
 using Avalonia.Controls.Templates;
+using Avalonia.Data;
 using Avalonia.Headless;
 using Avalonia.Headless.XUnit;
 using Avalonia.Input;
@@ -634,6 +636,112 @@ namespace BlackSharp.UI.Avalonia.TreeDataGrid.Tests
                 Assert.Equal("automation", model.Text);
                 ControlAutomationPeer.CreatePeerForElement(grid.TryGetCell(1, 0)!)!.GetProvider<IToggleProvider>()!.Toggle();
                 Assert.True(model.Flag);
+            }
+            finally
+            {
+                window.Close();
+            }
+        }
+
+        [AvaloniaFact]
+        public void Automation_Template_Cells_And_Rows_Expose_Visible_Names()
+        {
+            // Arrange
+            var model = new Model { Text = "Entry one" };
+            using var source = new FlatTreeDataGridSource<Model>(new[] { model });
+            source.Columns.Add(new TreeDataGridTemplateColumn
+            {
+                CellTemplate = new FuncDataTemplate<Model>((_, _) => new Image()),
+            });
+            source.Columns.Add(new TreeDataGridTemplateColumn
+            {
+                CellTemplate = new FuncDataTemplate<Model>((_, _) => new TextBlock
+                {
+                    [!TextBlock.TextProperty] = new Binding(nameof(Model.Text)),
+                }),
+            });
+            source.Columns.Add(new TreeDataGridTemplateColumn
+            {
+                CellTemplate = new FuncDataTemplate<Model>((_, _) => new Border
+                {
+                    IsVisible = false,
+                    Child = new TextBlock { Text = "Hidden text" },
+                }),
+            });
+            source.Columns.Add(new TreeDataGridTemplateColumn
+            {
+                CellTemplate = new FuncDataTemplate<Model>((_, _) => new Button
+                {
+                    Content = "+",
+                    [AutomationProperties.NameProperty] = "Named action",
+                }),
+            });
+            var grid = new TreeDataGrid { Source = source };
+            var window = Show(grid);
+
+            try
+            {
+                // Act
+                var iconName = ControlAutomationPeer.CreatePeerForElement(grid.TryGetCell(0, 0)!)!.GetName();
+                var textName = ControlAutomationPeer.CreatePeerForElement(grid.TryGetCell(1, 0)!)!.GetName();
+                var hiddenName = ControlAutomationPeer.CreatePeerForElement(grid.TryGetCell(2, 0)!)!.GetName();
+                var actionName = ControlAutomationPeer.CreatePeerForElement(grid.TryGetCell(3, 0)!)!.GetName();
+                var rowName = ControlAutomationPeer.CreatePeerForElement(grid.TryGetRow(0)!)!.GetName();
+
+                // Assert
+                Assert.Equal(string.Empty, iconName);
+                Assert.Equal("Entry one", textName);
+                Assert.Equal(string.Empty, hiddenName);
+                Assert.Equal("Named action", actionName);
+                Assert.Equal("Entry one", rowName);
+
+                // Act
+                model.Text = "Entry two";
+                Layout(window);
+
+                // Assert
+                Assert.Equal("Entry two", ControlAutomationPeer.CreatePeerForElement(grid.TryGetCell(1, 0)!)!.GetName());
+                Assert.Equal("Entry two", ControlAutomationPeer.CreatePeerForElement(grid.TryGetRow(0)!)!.GetName());
+
+                // Act
+                AutomationProperties.SetName(grid.TryGetCell(1, 0)!, "Custom cell");
+                AutomationProperties.SetName(grid.TryGetRow(0)!, "Custom row");
+
+                // Assert
+                Assert.Equal("Custom cell", ControlAutomationPeer.CreatePeerForElement(grid.TryGetCell(1, 0)!)!.GetName());
+                Assert.Equal("Custom row", ControlAutomationPeer.CreatePeerForElement(grid.TryGetRow(0)!)!.GetName());
+            }
+            finally
+            {
+                window.Close();
+            }
+        }
+
+        [AvaloniaFact]
+        public void Automation_Hierarchical_Template_Cell_Exposes_Text()
+        {
+            // Arrange
+            var model = new Model { Text = "Nested entry" };
+            using var source = new HierarchicalTreeDataGridSource<Model>(new[] { model })
+                .WithHierarchicalExpanderColumn("Entry", new TreeDataGridTemplateColumn
+                {
+                    CellTemplate = new FuncDataTemplate<Model>((_, _) => new TextBlock
+                    {
+                        [!TextBlock.TextProperty] = new Binding(nameof(Model.Text)),
+                    }),
+                }, x => x.Children, x => x.Expanded);
+            var grid = new TreeDataGrid { Source = source };
+            var window = Show(grid);
+
+            try
+            {
+                // Act
+                var cellName = ControlAutomationPeer.CreatePeerForElement(grid.TryGetCell(0, 0)!)!.GetName();
+                var rowName = ControlAutomationPeer.CreatePeerForElement(grid.TryGetRow(0)!)!.GetName();
+
+                // Assert
+                Assert.Equal("Nested entry", cellName);
+                Assert.Equal("Nested entry", rowName);
             }
             finally
             {
