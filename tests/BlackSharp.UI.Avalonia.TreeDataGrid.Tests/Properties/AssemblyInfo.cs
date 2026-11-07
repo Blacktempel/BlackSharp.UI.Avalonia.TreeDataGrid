@@ -1,4 +1,4 @@
-﻿using Xunit.v3;
+﻿using Xunit;
 
 // Don't run tests in parallel.
-[assembly: ParallelizationAttribute(Mode = Xunit.Sdk.ParallelMode.None)]
+[assembly: CollectionBehavior(DisableTestParallelization = true)]
