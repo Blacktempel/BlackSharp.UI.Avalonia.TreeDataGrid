@@ -47,6 +47,7 @@ jobs:
           dotnet-version: |
             8.0.x
             10.0.x
+            11.0.x
 
       - name: Cache NuGet packages
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
@@ -108,7 +109,7 @@ jobs:
               throw "Unexpected package identity or version in $($packages[0].Name)."
             }
 
-            foreach ($framework in @('net8.0', 'net10.0')) {
+            foreach ($framework in @('net8.0', 'net10.0', 'net11.0')) {
               $library = "lib/$framework/BlackSharp.UI.Avalonia.TreeDataGrid.dll"
               if ($library -cnotin $archive.Entries.FullName) { throw "Missing $library in the NuGet package." }
             }
@@ -131,4 +132,5 @@ jobs:
           path: |
             src/BlackSharp.UI.Avalonia.TreeDataGrid/bin/Release/net8.0/
             src/BlackSharp.UI.Avalonia.TreeDataGrid/bin/Release/net10.0/
+            src/BlackSharp.UI.Avalonia.TreeDataGrid/bin/Release/net11.0/
           if-no-files-found: error

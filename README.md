@@ -41,6 +41,7 @@ Wikipedia example requires an internet connection.
 | --- | --- |
 | .NET 8 | ✅ |
 | .NET 10 | ✅ |
+| .NET 11 | ✅ |
 
 ## Requirements
 

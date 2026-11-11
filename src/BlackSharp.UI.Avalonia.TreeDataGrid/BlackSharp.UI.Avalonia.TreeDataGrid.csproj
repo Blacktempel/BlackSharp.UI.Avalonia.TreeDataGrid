@@ -13,7 +13,7 @@
     <NoWarn>$(NoWarn);CS1591</NoWarn>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <ImplicitUsings>enable</ImplicitUsings>
-    <TargetFrameworks>net8.0;net10.0</TargetFrameworks>
+    <TargetFrameworks>net8.0;net10.0;net11.0</TargetFrameworks>
     <IsPackable>True</IsPackable>
     <PackageProjectUrl>https://github.com/Blacktempel/BlackSharp.UI.Avalonia.TreeDataGrid</PackageProjectUrl>
     <RepositoryUrl>https://github.com/Blacktempel/BlackSharp.UI.Avalonia.TreeDataGrid</RepositoryUrl>
@@ -22,6 +22,10 @@
     <PackageReadmeFile>README.md</PackageReadmeFile>
     <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
     <IsAotCompatible>true</IsAotCompatible>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(TargetFramework)'=='net11.0'">
+    <Features>$(Features);runtime-async=on</Features>
   </PropertyGroup>
 
   <PropertyGroup>
