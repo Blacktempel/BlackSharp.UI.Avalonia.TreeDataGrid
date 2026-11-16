@@ -19,9 +19,9 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Avalonia.Headless.XUnit" Version="12.1.4" />
+    <PackageReference Include="Avalonia.Headless.XUnit" Version="12.1.6" />
     <PackageReference Include="xunit.v3" Version="3.2.2" />
-    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.11.0" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.12.0" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\samples\BlackSharp.UI.Avalonia.TreeDataGrid.Demo\BlackSharp.UI.Avalonia.TreeDataGrid.Demo.csproj" />
