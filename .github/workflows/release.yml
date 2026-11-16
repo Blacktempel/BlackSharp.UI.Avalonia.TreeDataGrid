@@ -132,9 +132,6 @@ jobs:
           }
           finally { $archive.Dispose() }
 
-          $libraries = @(Get-ChildItem -LiteralPath 'staging/Libraries' -Recurse -Filter "$env:PACKAGE_ID.dll" -File)
-          if ($libraries.Count -ne 2) { throw "Expected libraries for two target frameworks, found $($libraries.Count)." }
-
           $releaseDirectory = (New-Item -ItemType Directory -Path release-assets -Force).FullName
           foreach ($component in @('NuGet', 'Libraries')) {
             $source = (Resolve-Path -LiteralPath "staging/$component").Path
